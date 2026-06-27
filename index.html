@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronômetro Personalizado</title>
+    <link rel="icon" type="image/x-icon" href="favicon.png">
+
+    
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: white;
+            overflow: hidden;
+            color: #111;
+        }
+
+        /* Menu Retrátil Lateral */
+        #menu {
+            position: fixed;
+            top: 0;
+            left: -350px;
+            width: 350px;
+            height: 100%;
+            background-color: #ffffff !important;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transition: left 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        #menu.aberto { left: 0; }
+        
+        #menu, #menu h2, #menu h3, #menu label, #menu span, #menu b {
+            color: #111111 !important;
+        }
+        
+        #btn-menu {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 999;
+            color: inherit;
+        }
+
+        #fechar-menu {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            float: right;
+        }
+
+        /* Área de Configuração e Formulário */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white !important;
+            color: #111 !important;
+        }
+
+        /* Estilo Específico para o Input de Tempo */
+        #input-tempo {
+            font-size: 32px;
+            text-align: center;
+            letter-spacing: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            cursor: text;
+        }
+        #input-tempo:focus {
+            outline: 2px solid #007bff;
+            border-color: transparent;
+        }
+        
+        /* Alinhamento dos Alertas com Color Picker */
+        .alerta-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .alerta-item input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        .alerta-item input[type="color"] {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 45px;
+            height: 28px;
+            padding: 0;
+            background: none;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        
+        button.acao {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff !important;
+            color: white !important;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        button.acao:hover { background-color: #0056b3 !important; }
+
+        /* Lista de Cronômetros Salvos */
+        #lista-cronometros { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; }
+        .item-cronometro {
+            background: #f8f9fa !important;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-cronometro:hover { background: #eee !important; }
+        .btn-excluir { background: none !important; border: none !important; color: red !important; cursor: pointer; padding: 5px; font-size: 16px; }
+
+        /* Tela Principal (Cronômetro Ativo) */
+        #container-principal {
+            text-align: center;
+            width: 100%;
+        }
+        
+        #display-tempo {
+            font-size: 22vw; 
+            font-variant-numeric: tabular-nums;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 40px;
+            user-select: none;
+        }
+        
+        .controles button {
+            font-size: 24px;
+            padding: 15px 40px;
+            margin: 0 10px;
+            border: 2px solid currentColor;
+            background: transparent;
+            color: inherit;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .controles button:hover { background: rgba(0,0,0,0.05); }
+        body[style*="background-color: rgb(255, 42, 42)"] .controles button:hover { background: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+    <button id="btn-menu">☰</button>
+
+    <div id="menu">
+        <button id="fechar-menu">✕</button>
+        <h2>Novo Cronômetro</h2>
+        
+        <div class="form-group">
+            <label>Nome:</label>
+            <input type="text" id="input-nome" placeholder="Ex: Foco / Reunião">
+        </div>
+
+        <div class="form-group">
+            <label>Tempo (HH:MM:SS):</label>
+            <input type="text" id="input-tempo" value="00:00:00" inputmode="numeric" autocomplete="off">
+        </div>
+
+        <label>Configurar alertas visuais:</label>
+        
+        <div class="alerta-item">
+            <input type="checkbox" id="alerta-1h">
+            <label for="alerta-1h">Faltando 1 Hora</label>
+            <input type="color" id="cor-1h" value="#ffcc00">
+        </div>
+        
+        <div class="alerta-item">
+            <input type="checkbox" id="alerta-30m">
+            <label for="alerta-30m">Faltando 30 Minutos</label>
+            <input type="color" id="cor-30m" value="#ffcc00">
+        </div>
+        
+        <div class="alerta-item">
+            <input type="checkbox" id="alerta-10m">
+            <label for="alerta-10m">Faltando 10 Minutos</label>
+            <input type="color" id="cor-10m" value="#ffcc00">
+        </div>
+        
+        <div class="alerta-item">
+            <input type="checkbox" id="alerta-5m">
+            <label for="alerta-5m">Faltando 5 Minutos</label>
+            <input type="color" id="cor-5m" value="#ffcc00">
+        </div>
+        
+        <div class="alerta-item">
+            <input type="checkbox" id="alerta-1m">
+            <label for="alerta-1m">Faltando 1 Minuto</label>
+            <input type="color" id="cor-1m" value="#ffcc00">
+        </div>
+        
+        <br>
+        <button class="acao" onclick="salvarCronometro()">Salvar Cronômetro</button>
+
+        <div id="lista-cronometros">
+            <h3>Meus Cronômetros</h3>
+            <div id="container-lista"></div>
+        </div>
+    </div>
+
+    <div id="container-principal">
+        <div id="display-tempo">0</div>
+        <div class="controles">
+            <button id="btn-iniciar" onclick="alternarCronometro()">Iniciar</button>
+            <button id="btn-reiniciar" onclick="reiniciarCronometro()">Reiniciar</button>
+        </div>
+    </div>
+
+    <script>
+        let cronometroAtual = { tempoTotal: 0, alertas: {} };
+        let msRestantes = 0; 
+        let dataFim = 0; 
+        let intervalo = null;
+        let rodando = false;
+        let tempoExibidoAtual = null;
+
+        const displayTempo = document.getElementById('display-tempo');
+        const btnIniciar = document.getElementById('btn-iniciar');
+        const menu = document.getElementById('menu');
+        const body = document.body;
+        const inputTempo = document.getElementById('input-tempo');
+
+        // --- LÓGICA DA MÁSCARA DO INPUT 00:00:00 --- //
+        
+        function selecionarBlocoTempo(input) {
+            const pos = input.selectionStart;
+            if (pos <= 2) input.setSelectionRange(0, 2);
+            else if (pos <= 5) input.setSelectionRange(3, 5);
+            else input.setSelectionRange(6, 8);
+        }
+
+        inputTempo.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            selecionarBlocoTempo(this);
+        });
+
+        inputTempo.addEventListener('keyup', function(e) {
+            if (['ArrowRight', 'ArrowLeft'].includes(e.key)) {
+                selecionarBlocoTempo(this);
+            }
+        });
+
+        inputTempo.addEventListener('keydown', function(e) {
+            if (['Tab', 'ArrowRight', 'ArrowLeft'].includes(e.key)) return;
+
+            e.preventDefault(); 
+            
+            let start = this.selectionStart;
+            let val = this.value.split('');
+
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                if (start <= 2) { val[0]='0'; val[1]='0'; this.value = val.join(''); this.setSelectionRange(0, 2); }
+                else if (start <= 5) { val[3]='0'; val[4]='0'; this.value = val.join(''); this.setSelectionRange(3, 5); }
+                else { val[6]='0'; val[7]='0'; this.value = val.join(''); this.setSelectionRange(6, 8); }
+                return;
+            }
+
+            if (!/^\d$/.test(e.key)) return; 
+
+            if (this.selectionEnd - start === 2) {
+                if (start === 0) { val[0] = '0'; val[1] = e.key; this.value = val.join(''); this.setSelectionRange(1, 2); }
+                else if (start === 3) { val[3] = '0'; val[4] = e.key; this.value = val.join(''); this.setSelectionRange(4, 5); }
+                else if (start === 6) { val[6] = '0'; val[7] = e.key; this.value = val.join(''); this.setSelectionRange(7, 8); }
+            } else {
+                if (start === 1) { val[0] = val[1]; val[1] = e.key; this.value = val.join(''); this.setSelectionRange(3, 5); }
+                else if (start === 4) { val[3] = val[4]; val[4] = e.key; this.value = val.join(''); this.setSelectionRange(6, 8); }
+                else if (start === 7) { val[6] = val[7]; val[7] = e.key; this.value = val.join(''); this.setSelectionRange(6, 8); }
+            }
+        });
+
+        // --- FIM DA MÁSCARA --- //
+
+        document.getElementById('btn-menu').onclick = () => menu.classList.add('aberto');
+        document.getElementById('fechar-menu').onclick = () => menu.classList.remove('aberto');
+
+        function formatarTextoCompleto(segundosTotais) {
+            const h = Math.floor(segundosTotais / 3600).toString().padStart(2, '0');
+            const m = Math.floor((segundosTotais % 3600) / 60).toString().padStart(2, '0');
+            const s = (segundosTotais % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function formatarTempoExibicao(segundosTotais) {
+            // Verifica se o tempo é negativo para adicionar o sinal depois
+            const ehNegativo = segundosTotais < 0;
+            const absSegs = Math.abs(segundosTotais);
+
+            if (absSegs === 0) return "0";
+
+            let tempoStr = formatarTextoCompleto(absSegs);
+            
+            let cutIndex = 0;
+            for (let i = 0; i < tempoStr.length; i++) {
+                if (tempoStr[i] !== '0' && tempoStr[i] !== ':') {
+                    cutIndex = i;
+                    break;
+                }
+            }
+            
+            const exibicao = tempoStr.substring(cutIndex);
+            
+            // Adiciona o sinal de negativo caso o tempo já tenha passado do zero
+            return ehNegativo ? `-${exibicao}` : exibicao;
+        }
+
+        function alternarCronometro() {
+            // Só impede de rodar se for um cronômetro vazio sem configuração (tempoTotal 0)
+            if (cronometroAtual.tempoTotal <= 0) return;
+
+            if (rodando) {
+                clearInterval(intervalo);
+                btnIniciar.innerText = "Iniciar";
+                rodando = false;
+                
+                // Pode armazenar milissegundos negativos caso pause depois de acabar
+                msRestantes = dataFim - Date.now();
+            } else {
+                menu.classList.remove('aberto');
+                
+                dataFim = Date.now() + msRestantes;
+                
+                intervalo = setInterval(atualizarCronometro, 50);
+                btnIniciar.innerText = "Pausar";
+                rodando = true;
+                atualizarCronometro(); 
+            }
+        }
+
+        function atualizarCronometro() {
+            let agora = Date.now();
+            let ms = dataFim - agora;
+
+            // Se ms for positivo, arredonda pra cima. Se for negativo, converte certinho os segundos negativos.
+            let segs = Math.ceil(ms / 1000); 
+
+            if (segs !== tempoExibidoAtual) {
+                tempoExibidoAtual = segs;
+                displayTempo.innerText = formatarTempoExibicao(tempoExibidoAtual);
+                verificarAlertas(tempoExibidoAtual);
+            }
+            
+            // Removemos o 'clearInterval' automático para que ele continue contando no negativo.
+        }
+
+        function reiniciarCronometro() {
+            clearInterval(intervalo);
+            rodando = false;
+            btnIniciar.innerText = "Iniciar";
+            
+            msRestantes = cronometroAtual.tempoTotal * 1000;
+            tempoExibidoAtual = cronometroAtual.tempoTotal;
+            
+            displayTempo.innerText = formatarTempoExibicao(tempoExibidoAtual);
+            limparCores();
+        }
+
+        function limparCores() {
+            body.style.backgroundColor = 'white';
+            body.style.color = '#111';
+            document.getElementById('btn-menu').style.color = "inherit";
+        }
+
+        function verificarAlertas(segs) {
+            limparCores();
+            const a = cronometroAtual.alertas;
+            
+            // Do 0 em diante (negativo), a tela trava na cor vermelha
+            if (segs <= 0) {
+                body.style.backgroundColor = '#ff2a2a';
+                body.style.color = 'white';
+                document.getElementById('btn-menu').style.color = "white"; 
+                return;
+            }
+
+            // Piscar vermelho nos últimos 5 segundos (5, 4, 3, 2, 1)
+            if (segs <= 5 && segs > 0) {
+                if (segs % 2 !== 0) {
+                    body.style.backgroundColor = '#ff2a2a';
+                    body.style.color = 'white';
+                    document.getElementById('btn-menu').style.color = "white"; 
+                }
+                return; 
+            }
+
+            const alvosAlertas = [
+                { tempo: 3600, config: a.h1 },
+                { tempo: 1800, config: a.m30 },
+                { tempo: 600,  config: a.m10 },
+                { tempo: 300,  config: a.m5 },
+                { tempo: 60,   config: a.m1 }
+            ];
+
+            for (let alvo of alvosAlertas) {
+                if (alvo.config && alvo.config.ativo) {
+                    const diff = segs - alvo.tempo;
+                    if (diff <= 5 && diff > 0) {
+                        if (diff % 2 !== 0) { 
+                            body.style.backgroundColor = alvo.config.cor;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        function salvarCronometro() {
+            const nome = document.getElementById('input-nome').value || 'Cronômetro';
+            
+            const tempoStr = document.getElementById('input-tempo').value;
+            const partes = tempoStr.split(':');
+            const h = parseInt(partes[0]) || 0;
+            const m = parseInt(partes[1]) || 0;
+            const s = parseInt(partes[2]) || 0;
+            
+            const novoCronometro = {
+                id: Date.now(),
+                nome: nome,
+                tempoTotal: (h * 3600) + (m * 60) + s,
+                alertas: {
+                    h1: { ativo: document.getElementById('alerta-1h').checked, cor: document.getElementById('cor-1h').value },
+                    m30: { ativo: document.getElementById('alerta-30m').checked, cor: document.getElementById('cor-30m').value },
+                    m10: { ativo: document.getElementById('alerta-10m').checked, cor: document.getElementById('cor-10m').value },
+                    m5: { ativo: document.getElementById('alerta-5m').checked, cor: document.getElementById('cor-5m').value },
+                    m1: { ativo: document.getElementById('alerta-1m').checked, cor: document.getElementById('cor-1m').value }
+                }
+            };
+
+            let salvos = JSON.parse(localStorage.getItem('cronometrosApp')) || [];
+            salvos.push(novoCronometro);
+            localStorage.setItem('cronometrosApp', JSON.stringify(salvos));
+            
+            renderizarLista();
+            document.getElementById('input-tempo').value = '00:00:00';
+        }
+
+        function carregarCronometro(id) {
+            const salvos = JSON.parse(localStorage.getItem('cronometrosApp')) || [];
+            const selecionado = salvos.find(x => x.id === id);
+            if (selecionado) {
+                cronometroAtual = {
+                    ...selecionado,
+                    alertas: selecionado.alertas || {}
+                };
+                
+                inputTempo.value = formatarTextoCompleto(cronometroAtual.tempoTotal);
+                document.getElementById('input-nome').value = cronometroAtual.nome;
+                
+                reiniciarCronometro();
+                menu.classList.remove('aberto');
+            }
+        }
+
+        function excluirCronometro(event, id) {
+            event.stopPropagation();
+            let salvos = JSON.parse(localStorage.getItem('cronometrosApp')) || [];
+            salvos = salvos.filter(x => x.id !== id);
+            localStorage.setItem('cronometrosApp', JSON.stringify(salvos));
+            renderizarLista();
+        }
+
+        function renderizarLista() {
+            const salvos = JSON.parse(localStorage.getItem('cronometrosApp')) || [];
+            const container = document.getElementById('container-lista');
+            container.innerHTML = '';
+            
+            salvos.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'item-cronometro';
+                div.onclick = () => carregarCronometro(c.id);
+                
+                div.innerHTML = `
+                    <span><b>${c.nome}</b> (${formatarTextoCompleto(c.tempoTotal)})</span>
+                    <button class="btn-excluir" onclick="excluirCronometro(event, ${c.id})">✕</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        renderizarLista();
+    </script>
+</body>
+</html>
