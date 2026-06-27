@@ -3,3 +3,5 @@ Fiz esse projetinho bem simples para poder controlar o tempo de momentos que pos
 
 Nessa versão, devido a discrição que se deve manter ao extrapolar o tempo de uma pregação, não será emitido nenhum som.
 Além disso o app também funciona 100% offiline para você baixar e usar em locais que não possuem internet.
+
+<a href="https://www.flaticon.com/free-icons/timer" title="timer icons">Timer icons created by Freepik - Flaticon</a>
